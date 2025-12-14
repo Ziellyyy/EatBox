@@ -103,13 +103,13 @@ void loadMenu() {
     char buffer[512];
 
     while (fgets(buffer, sizeof(buffer), file)) {
-        if (sscanf(buffer, "%9[^|]|%19[^|]|%99[^|]|%lf|%199[^|]|%19[^\n]",
-                   daftarMenu[jumlahMenu].id_menu,
-                   daftarMenu[jumlahMenu].kategori,
-                   daftarMenu[jumlahMenu].nama_menu,
-                   &daftarMenu[jumlahMenu].harga,
-                   daftarMenu[jumlahMenu].deskripsi,
-                   daftarMenu[jumlahMenu].status) == 6)
+        if (sscanf(buffer, "%9[^|]|%19[^|]|%99[^|]|%lf|%199[^|]|%d",
+           daftarMenu[jumlahMenu].id_menu,
+           daftarMenu[jumlahMenu].kategori,
+           daftarMenu[jumlahMenu].nama_menu,
+           &daftarMenu[jumlahMenu].harga,
+           daftarMenu[jumlahMenu].deskripsi,
+           &daftarMenu[jumlahMenu].status) == 6)
         {
             jumlahMenu++;
             if (jumlahMenu >= MAX_MENU) break;
@@ -128,13 +128,13 @@ void saveMenu() {
     }
 
     for (int i = 0; i < jumlahMenu; i++) {
-        fprintf(file, "%s|%s|%s|%.2lf|%s|%s\n",
-                daftarMenu[i].id_menu,
-                daftarMenu[i].kategori,
-                daftarMenu[i].nama_menu,
-                daftarMenu[i].harga,
-                daftarMenu[i].deskripsi,
-                daftarMenu[i].status);
+        fprintf(file, "%s|%s|%s|%.2lf|%s|%d\n",
+        daftarMenu[i].id_menu,
+        daftarMenu[i].kategori,
+        daftarMenu[i].nama_menu,
+        daftarMenu[i].harga,
+        daftarMenu[i].deskripsi,
+        daftarMenu[i].status);
     }
 
     fclose(file);
@@ -172,7 +172,7 @@ void tambahMenu() {
     strcpy(m.nama_menu, "");
     m.harga = 0;
     strcpy(m.deskripsi, "");
-    strcpy(m.status, "");
+    m.status = 0;   // <-- PERBAIKAN (bukan strcpy)
 
     generateID(m.id_menu);
 
@@ -192,7 +192,7 @@ void tambahMenu() {
         printf("     Nama Menu    : %s\n", m.nama_menu);
         printf("     Harga        : %.0lf\n", m.harga);
         printf("     Deskripsi    : %s\n", m.deskripsi);
-        printf("     Status       : %s\n", m.status);
+        printf("     Status       : %s\n", (m.status == 1) ? "Tersedia" : "Habis");
         printf("  ---------------------------------------------------------  \n\n");
         printf("\033[0m");
 
@@ -267,11 +267,11 @@ void tambahMenu() {
                 m.deskripsi[strcspn(m.deskripsi, "\n")] = 0;
                 break;
 
-            case 4: // Status
-                printf("Masukkan Status (Tersedia/Habis): ");
-                fgets(m.status, sizeof(m.status), stdin);
-                m.status[strcspn(m.status, "\n")] = 0;
-                break;
+                case 4:
+                    printf("Masukkan Status (1=Tersedia, 0=Habis): ");
+                    scanf("%d", &m.status);
+                    while (getchar() != '\n');
+                    break;
 
             case 5: //menyimpan
                 daftarMenu[jumlahMenu++] = m;
@@ -292,6 +292,7 @@ void tambahMenu() {
 
 void tampilkanTabel(int page) {
     applyColors();
+
     int maxPage = (jumlahMenu == 0) ? 1 : ((jumlahMenu - 1) / ITEMS_PER_PAGE) + 1;
 
     if (page > maxPage) page = maxPage;
@@ -303,12 +304,15 @@ void tampilkanTabel(int page) {
     if (end > jumlahMenu) end = jumlahMenu;
 
     printf("\n");
-    printf("\n|======|==================|========================|==========|=========================|============|\n");
-    printf("\n| %-4s | %-16s | %-22s | %-8s | %-23s | %-10s |\n",
+    printf("|======|==================|========================|==========|=========================|============|\n");
+    printf("| %-4s | %-16s | %-22s | %-8s | %-23s | %-10s |\n",
            "ID", "Kategori", "Nama Menu", "Harga", "Deskripsi", "Status");
-    printf("\n|======|==================|========================|==========|=========================|============|\n");
+    printf("|======|==================|========================|==========|=========================|============|\n");
 
     for (int i = start; i < end; i++) {
+        char statusTxt[12];
+        strcpy(statusTxt, (daftarMenu[i].status == 1) ? "Tersedia" : "Habis");
+
         char desc_short[24];
         if (strlen(daftarMenu[i].deskripsi) > 23) {
             strncpy(desc_short, daftarMenu[i].deskripsi, 20);
@@ -326,11 +330,11 @@ void tampilkanTabel(int page) {
                daftarMenu[i].nama_menu,
                daftarMenu[i].harga,
                desc_short,
-               daftarMenu[i].status);
+               statusTxt);
     }
 
     printf("|======|==================|========================|==========|=========================|============|\n");
-    printf("\nHalaman: %d / %d  (Total Menu: %d)\n", currentPage, maxPage, jumlahMenu);
+    printf("Halaman: %d / %d  (Total Menu: %d)\n", currentPage, maxPage, jumlahMenu);
 }
 
 void lihatMenu() {
@@ -423,9 +427,10 @@ void ubahMenu() {
     fgets(daftarMenu[index].deskripsi, sizeof(daftarMenu[index].deskripsi), stdin);
     daftarMenu[index].deskripsi[strcspn(daftarMenu[index].deskripsi, "\n")] = 0;
 
-    printf("Status Baru    : ");
-    fgets(daftarMenu[index].status, sizeof(daftarMenu[index].status), stdin);
-    daftarMenu[index].status[strcspn(daftarMenu[index].status, "\n")] = 0;
+    printf("Status Baru (1 = Tersedia, 0 = Habis): ");
+    scanf("%d", &daftarMenu[index].status);
+    getchar(); // menghilangkan newline
+
 
     saveMenu();
     printf("\nMenu berhasil diubah!\n");
@@ -485,24 +490,25 @@ void cariMenu() {
     system("cls");
     applyColors();
     printf("\n|=======================================|\n");
-    printf("|           CARI MENU                   |\n");
+    printf("|               CARI MENU               |\n");
     printf("|=======================================|\n");
 
     char keyword[100];
-    printf("\nMasukkan nama menu : ");
+    printf("\nMasukkan kata kunci (nama/kategori): ");
     fgets(keyword, sizeof(keyword), stdin);
     keyword[strcspn(keyword, "\n")] = 0;
 
     printf("\n");
-    printf("|======|====================|========================|==========|=========================|============|\n");
+    printf("|======|==================|========================|==========|=========================|============|\n");
     printf("| %-4s | %-16s | %-22s | %-8s | %-23s | %-10s |\n",
            "ID", "Kategori", "Nama Menu", "Harga", "Deskripsi", "Status");
-    printf("|======|====================|==========================|==========|=========================|============|\n");
+    printf("|======|==================|========================|==========|=========================|============|\n");
 
     int found = 0;
+
     for (int i = 0; i < jumlahMenu; i++) {
-        if (strstr(daftarMenu[i].nama_menu, keyword) != NULL ||
-            strstr(daftarMenu[i].kategori, keyword) != NULL) {
+        if (strstr(daftarMenu[i].nama_menu, keyword) ||
+            strstr(daftarMenu[i].kategori, keyword)) {
 
             char desc_short[24];
             if (strlen(daftarMenu[i].deskripsi) > 23) {
@@ -527,10 +533,10 @@ void cariMenu() {
     }
 
     if (!found) {
-        printf("| %-98s |\n", "Tidak ada menu yang ditemukan");
+        printf("| %-100s |\n", "Tidak ada menu yang cocok dengan pencarian.");
     }
 
     printf("|======|==================|========================|==========|=========================|============|\n");
-    printf("\nTekan Enter untuk kembali...");
+    printf("Tekan Enter untuk kembali...");
     getch();
 }
